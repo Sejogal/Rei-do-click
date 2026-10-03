@@ -19,6 +19,7 @@ export function Header() {
       </Link>
       {link("/", "solo")}
       {link("/multiplayer", "multiplayer")}
+      {link("/profile", "perfil")}
     </header>
   );
 }

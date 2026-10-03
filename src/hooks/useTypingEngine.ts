@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { generateWords } from "../lib/words";
 import { calculateStats } from "../lib/metrics";
+import { useConfig } from "../store/config";
+import { saveResult } from "../lib/storage";
 import type { WordData, TypingStats } from "../types";
-
-const WORD_COUNT = 30;
 
 function buildWords(words: string[]): WordData[] {
   return words.map((w) => ({
@@ -12,48 +12,88 @@ function buildWords(words: string[]): WordData[] {
 }
 
 export function useTypingEngine() {
-  const [words, setWords] = useState<WordData[]>(() =>
-    buildWords(generateWords(WORD_COUNT))
-  );
+  const { config } = useConfig();
+  const wordCount = config.mode === "words" ? config.wordCount : 120;
+
+  const [words, setWords] = useState<WordData[]>(() => buildWords(generateWords(wordCount)));
   const [currentWord, setCurrentWord] = useState(0);
   const [currentChar, setCurrentChar] = useState(0);
   const [started, setStarted] = useState(false);
   const [finished, setFinished] = useState(false);
   const [stats, setStats] = useState<TypingStats | null>(null);
+  const [elapsed, setElapsed] = useState(0);
 
   const startTimeRef = useRef<number | null>(null);
   const correctCharsRef = useRef(0);
   const incorrectCharsRef = useRef(0);
   const wpmSamplesRef = useRef<number[]>([]);
-  const lastSampleRef = useRef<number>(0);
+  const lastSampleRef = useRef(0);
+  const finishedRef = useRef(false);
 
   const reset = useCallback(() => {
-    setWords(buildWords(generateWords(WORD_COUNT)));
+    finishedRef.current = false;
+    setWords(
+      buildWords(
+        generateWords(wordCount, {
+          language: config.language,
+          punctuation: config.punctuation,
+          numbers: config.numbers,
+        })
+      )
+    );
     setCurrentWord(0);
     setCurrentChar(0);
     setStarted(false);
     setFinished(false);
     setStats(null);
+    setElapsed(0);
     startTimeRef.current = null;
     correctCharsRef.current = 0;
     incorrectCharsRef.current = 0;
     wpmSamplesRef.current = [];
     lastSampleRef.current = 0;
-  }, []);
+  }, [wordCount, config.language, config.punctuation, config.numbers]);
+
+  // Reset quando a config muda
+  useEffect(() => {
+    reset();
+  }, [reset]);
 
   const finish = useCallback(() => {
-    const elapsed = startTimeRef.current
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+
+    const elapsedSec = startTimeRef.current
       ? (performance.now() - startTimeRef.current) / 1000
       : 0;
+
     const s = calculateStats(
       correctCharsRef.current,
       incorrectCharsRef.current,
-      elapsed,
+      elapsedSec,
       wpmSamplesRef.current
     );
     setStats(s);
     setFinished(true);
-  }, []);
+    saveResult(s, config);
+  }, [config]);
+
+  // Timer para modo "time"
+  useEffect(() => {
+    if (!started || finished) return;
+    if (config.mode !== "time") return;
+
+    const interval = setInterval(() => {
+      if (!startTimeRef.current) return;
+      const sec = (performance.now() - startTimeRef.current) / 1000;
+      setElapsed(sec);
+      if (sec >= config.time) {
+        finish();
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [started, finished, config.mode, config.time, finish]);
 
   const handleKey = useCallback(
     (key: string) => {
@@ -67,11 +107,11 @@ export function useTypingEngine() {
 
       if (!started) return;
 
-      // Amostra de WPM por segundo (para consistência)
+      // Amostra de WPM
       const now = performance.now();
       if (now - lastSampleRef.current >= 1000) {
-        const elapsed = (now - startTimeRef.current!) / 1000;
-        const wpm = (correctCharsRef.current / 5 / elapsed) * 60;
+        const elapsedSec = (now - startTimeRef.current!) / 1000;
+        const wpm = (correctCharsRef.current / 5 / elapsedSec) * 60;
         wpmSamplesRef.current.push(wpm);
         lastSampleRef.current = now;
       }
@@ -80,9 +120,7 @@ export function useTypingEngine() {
       if (!word) return;
 
       if (key === " ") {
-        // Avança palavra
         if (currentChar === 0) return;
-        // Marca chars pendentes como corretos? Não — só avança
         setCurrentWord((w) => w + 1);
         setCurrentChar(0);
         if (currentWord === words.length - 1) {
@@ -106,7 +144,6 @@ export function useTypingEngine() {
 
       const expected = word.chars[currentChar];
       if (!expected) {
-        // Extra chars além do tamanho da palavra
         word.chars.push({ char: key, state: "extra" });
         incorrectCharsRef.current++;
         setWords([...words]);
@@ -142,5 +179,15 @@ export function useTypingEngine() {
     return () => window.removeEventListener("keydown", listener);
   }, [handleKey, reset]);
 
-  return { words, currentWord, currentChar, started, finished, stats, reset };
+  return {
+    words,
+    currentWord,
+    currentChar,
+    started,
+    finished,
+    stats,
+    reset,
+    elapsed,
+    timeLeft: config.mode === "time" ? Math.max(0, config.time - elapsed) : null,
+  };
 }
