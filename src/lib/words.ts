@@ -21,6 +21,9 @@ const WORDS_EN = [
   "so", "up", "out", "if", "about", "who", "get", "which", "go", "me",
 ];
 
+const PUNCT = [",", ".", ";", ":", "!", "?", "-", "'"];
+
+
 export function generateWords(
   count: number,
   opts: { language?: "pt" | "en"; punctuation?: boolean; numbers?: boolean } = {}
