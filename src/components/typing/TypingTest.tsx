@@ -72,6 +72,12 @@ export function TypingTest() {
                     {Math.ceil(timeLeft ?? 0)}s
                 </div>
             )}
+            {/* Contagem modo palavras */}
+            {config.mode === "words" && (
+                <div className="text-sub font-mono text-sm mb-6 text-center">
+                    {Math.min(currentWord + 1, words.length)}<span className="text-sub/50"> / </span>{words.length}
+                </div>
+            )}
             <div className="relative">
                 {!focused && (
                     <div
@@ -107,7 +113,7 @@ export function TypingTest() {
 
             {!started && (
                 <p className="mt-8 text-sub text-sm text-center">
-                    Começa a digitar para iniciar · Tab para reiniciar
+                    Começa a digitar para iniciar · Tab ou Esc para reiniciar
                 </p>
             )}
         </div>

@@ -27,23 +27,36 @@ export function ConfigBar() {
       {/* Valores conforme modo */}
       {config.mode === "time"
         ? TIME_OPTIONS.map((t) => (
-            <Btn
-              key={t}
-              active={config.time === t}
-              onClick={() => update({ time: t })}
-            >
-              {t}
-            </Btn>
-          ))
+          <Btn
+            key={t}
+            active={config.time === t}
+            onClick={() => update({ time: t })}
+          >
+            {t}
+          </Btn>
+        ))
         : WORD_OPTIONS.map((w) => (
-            <Btn
-              key={w}
-              active={config.wordCount === w}
-              onClick={() => update({ wordCount: w })}
-            >
-              {w}
-            </Btn>
-          ))}
+          <Btn
+            key={w}
+            active={config.wordCount === w}
+            onClick={() => update({ wordCount: w })}
+          >
+            {w}
+          </Btn>
+        ))}
+
+      {/* Source */}
+      <div className="flex gap-1">
+        {(["words", "quote", "code", "custom"] as const).map((s) => (
+          <Btn
+            key={s}
+            active={config.source === s}
+            onClick={() => update({ source: s })}
+          >
+            {s}
+          </Btn>
+        ))}
+      </div>
 
       <Divider />
 
@@ -76,9 +89,8 @@ function Btn({
   return (
     <button
       onClick={onClick}
-      className={`px-2.5 py-1 rounded transition ${
-        active ? "text-accent" : "text-sub hover:text-text"
-      }`}
+      className={`px-2.5 py-1 rounded transition ${active ? "text-accent" : "text-sub hover:text-text"
+        }`}
     >
       {children}
     </button>

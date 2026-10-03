@@ -1,6 +1,8 @@
 export type CharState = "pending" | "correct" | "incorrect" | "extra";
 export type TestMode = "time" | "words";
 export type Language = "pt" | "en";
+export type TextSource = "words" | "quote" | "code" | "custom";
+
 
 export interface CharData {
   char: string;
@@ -28,15 +30,20 @@ export interface TypingStats {
 
 export interface TestConfig {
   mode: TestMode;
+  source: TextSource;    // words | quote | code | custom  ← NOVO
   time: number; // 15 | 30 | 60 | 120
   wordCount: number; // 10 | 25 | 50 | 100
   punctuation: boolean;
   numbers: boolean;
   language: Language;
+  quoteId?: string;      // para source=quote
+  codeId?: string;       // para source=code
+  customText?: string;   // para source=custom
 }
 
 export const DEFAULT_CONFIG: TestConfig = {
   mode: "time",
+  source: "words",       // ← NOVO
   time: 30,
   wordCount: 25,
   punctuation: false,

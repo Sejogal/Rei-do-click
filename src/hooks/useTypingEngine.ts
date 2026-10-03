@@ -4,12 +4,25 @@ import { calculateStats } from "../lib/metrics";
 import { useConfig } from "../store/config";
 import { saveResult } from "../lib/storage";
 import type { WordData, TypingStats } from "../types";
+import { getRandomQuote } from "../lib/quotes";
+import { getRandomSnippet } from "../lib/code";
 
 function buildWords(words: string[]): WordData[] {
   return words.map((w) => ({
     chars: w.split("").map((c) => ({ char: c, state: "pending" as const })),
   }));
 }
+
+function buildFromText(text: string): WordData[] {
+  // Divide por espaços, preserva \n como espaço "visual" (podes tratar depois)
+  return text
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => ({
+      chars: w.split("").map((c) => ({ char: c, state: "pending" as const })),
+    }));
+}
+
 
 export function useTypingEngine() {
   const { config } = useConfig();
@@ -32,15 +45,28 @@ export function useTypingEngine() {
 
   const reset = useCallback(() => {
     finishedRef.current = false;
-    setWords(
-      buildWords(
+
+    let newWords: WordData[];
+
+    if (config.source === "quote") {
+      const q = getRandomQuote(config.language);
+      newWords = buildFromText(q.text);
+    } else if (config.source === "code") {
+      const s = getRandomSnippet();
+      newWords = buildFromText(s.text);
+    } else if (config.source === "custom" && config.customText) {
+      newWords = buildFromText(config.customText);
+    } else {
+      newWords = buildWords(
         generateWords(wordCount, {
           language: config.language,
           punctuation: config.punctuation,
           numbers: config.numbers,
         })
-      )
-    );
+      );
+    }
+
+    setWords(newWords);
     setCurrentWord(0);
     setCurrentChar(0);
     setStarted(false);
@@ -52,7 +78,7 @@ export function useTypingEngine() {
     incorrectCharsRef.current = 0;
     wpmSamplesRef.current = [];
     lastSampleRef.current = 0;
-  }, [wordCount, config.language, config.punctuation, config.numbers]);
+  }, [wordCount, config.language, config.punctuation, config.numbers, config.source, config.customText,]);
 
   // Reset quando a config muda
   useEffect(() => {
@@ -167,12 +193,23 @@ export function useTypingEngine() {
 
   useEffect(() => {
     const listener = (e: KeyboardEvent) => {
-      if (e.key === "Tab") {
+      // Tab ou Esc → reinicia
+      if (e.key === "Tab" || e.key === "Escape") {
         e.preventDefault();
         reset();
         return;
       }
+
+      // Ctrl/Cmd + Enter → reset também (placeholder para "próximo teste")
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        e.preventDefault();
+        reset();
+        return;
+      }
+
+      // Ignora modificadores
       if (e.metaKey || e.ctrlKey || e.altKey) return;
+
       handleKey(e.key);
     };
     window.addEventListener("keydown", listener);
