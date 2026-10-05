@@ -16,3 +16,29 @@ html, body, #root {
   background: #0f0f10;
   color: #e2e2e2;
 }
+
+/* Evita zoom ao dar tap duplo */
+* {
+  touch-action: manipulation;
+}
+
+/* Evita highlight azul ao tocar */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Evita seleção de texto indesejada */
+.select-none {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Esconde o caret real do input */
+input[type="text"] {
+  caret-color: transparent;
+}
+
+/* Impede scroll elástico quando o teclado abre */
+html, body {
+  overscroll-behavior: none;
+}

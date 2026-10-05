@@ -1,121 +1,167 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTypingEngine } from "../../hooks/useTypingEngine";
+import { useConfig } from "../../store/config";
+import { useIsMobile } from "../../hooks/useIsMobile";
 import { Word } from "./Word";
 import { Caret } from "./Caret";
 import { Results } from "../results/Results";
-import { useConfig } from "../../store/config";
-
-const LINES_VISIBLE = 3;
+import { HiddenInput } from "./HiddenInput";
 
 export function TypingTest() {
-    const { words, currentWord, currentChar, started, finished, stats, reset, timeLeft } = useTypingEngine();
+  const {
+    words,
+    currentWord,
+    currentChar,
+    started,
+    finished,
+    stats,
+    reset,
+    timeLeft,
+    handleInput,
+    handleKeyDownInput,
+  } = useTypingEngine();
 
-    const { config } = useConfig();
+  const { config } = useConfig();
+  const isMobile = useIsMobile();
+  const linesVisible = isMobile ? 2 : 3;
+  const fontSize = isMobile ? "text-lg" : "text-2xl";
+  const gap = isMobile ? "gap-x-2 gap-y-2" : "gap-x-3 gap-y-3";
+  const lineHeightRem = isMobile ? 2.25 : 2.75;
 
-    const [activeRef, setActiveRef] = useState<HTMLElement | null>(null);
-    const [offsetY, setOffsetY] = useState(0);
-    const [focused, setFocused] = useState(true);
-    const containerRef = useRef<HTMLDivElement>(null);
+  const [activeRef, setActiveRef] = useState<HTMLElement | null>(null);
+  const [offsetY, setOffsetY] = useState(0);
+  const [focused, setFocused] = useState(true);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-    const setRef = useCallback((el: HTMLElement | null) => {
-        setActiveRef(el);
-    }, []);
+  const setRef = useCallback((el: HTMLElement | null) => {
+    setActiveRef(el);
+  }, []);
 
-    // Reset do scroll quando as palavras mudam (novo teste)
-    useEffect(() => {
-        setOffsetY(0);
-    }, [words]);
+  // Reset do scroll quando as palavras mudam
+  useEffect(() => {
+    setOffsetY(0);
+  }, [words]);
 
-    // Scroll automático: quando a linha ativa passa da 3ª, sobe
-    useEffect(() => {
-        if (!activeRef || !containerRef.current) return;
+  // Scroll automático
+  useEffect(() => {
+    if (!activeRef || !containerRef.current) return;
 
-        const rect = activeRef.getBoundingClientRect();
-        const containerRect = containerRef.current.getBoundingClientRect();
-        const lineHeight = rect.height + 12; // altura do char + gap-y-3
-        const linesFromTop = Math.floor(
-            (rect.top - containerRect.top + offsetY) / lineHeight
-        );
-
-        if (linesFromTop >= LINES_VISIBLE) {
-            setOffsetY((prev) => prev + lineHeight);
-        }
-    }, [activeRef, offsetY]);
-
-    // Foco / desfoco da janela
-    useEffect(() => {
-        const onBlur = () => setFocused(false);
-        const onFocus = () => setFocused(true);
-        window.addEventListener("blur", onBlur);
-        window.addEventListener("focus", onFocus);
-        return () => {
-            window.removeEventListener("blur", onBlur);
-            window.removeEventListener("focus", onFocus);
-        };
-    }, []);
-
-    // Se clicares no overlay, volta a focar
-    const handleRefocus = () => {
-        setFocused(true);
-        window.focus();
-    };
-
-    if (finished && stats) {
-        return <Results stats={stats} onRestart={reset} />;
-    }
-
-    return (
-        <div className="max-w-4xl mx-auto px-4 w-full">
-            {/* Timer — só aparece no modo tempo */}
-            {config.mode === "time" && started && (
-                <div className="text-accent font-mono text-2xl mb-6 text-center">
-                    {Math.ceil(timeLeft ?? 0)}s
-                </div>
-            )}
-            {/* Contagem modo palavras */}
-            {config.mode === "words" && (
-                <div className="text-sub font-mono text-sm mb-6 text-center">
-                    {Math.min(currentWord + 1, words.length)}<span className="text-sub/50"> / </span>{words.length}
-                </div>
-            )}
-            <div className="relative">
-                {!focused && (
-                    <div
-                        onClick={handleRefocus}
-                        className="absolute inset-0 z-10 flex items-center justify-center backdrop-blur-sm bg-bg/40 cursor-pointer rounded"
-                    >
-                        <span className="text-sub text-sm">Clica para focar</span>
-                    </div>
-                )}
-
-                <div
-                    className="overflow-hidden"
-                    style={{ height: `calc(2.75rem * ${LINES_VISIBLE})` }}
-                >
-                    <div
-                        ref={containerRef}
-                        className="relative flex flex-wrap gap-x-3 gap-y-3 text-2xl font-mono leading-relaxed select-none transition-transform duration-200 ease-out"
-                        style={{ transform: `translateY(-${offsetY}px)` }}
-                    >
-                        <Caret targetRef={activeRef} />
-                        {words.map((w, i) => (
-                            <Word
-                                key={i}
-                                data={w}
-                                activeChar={i === currentWord ? currentChar : null}
-                                isPast={i < currentWord}
-                                setActiveRef={setRef}
-                            />
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {!started && (
-                <p className="mt-8 text-sub text-sm text-center">
-                    Começa a digitar para iniciar · Tab ou Esc para reiniciar
-                </p>
-            )}
-        </div>
+    const rect = activeRef.getBoundingClientRect();
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const lineHeight = rect.height + (isMobile ? 8 : 12);
+    const linesFromTop = Math.floor(
+      (rect.top - containerRect.top + offsetY) / lineHeight
     );
+
+    if (linesFromTop >= linesVisible) {
+      setOffsetY((prev) => prev + lineHeight);
+    }
+  }, [activeRef, offsetY, linesVisible, isMobile]);
+
+  // Foco/desfoco — só faz sentido em desktop.
+  // Em mobile, o teclado abre/fecha e o blur dispara constantemente.
+  useEffect(() => {
+    if (isMobile) return;
+
+    const onBlur = () => setFocused(false);
+    const onFocus = () => setFocused(true);
+    window.addEventListener("blur", onBlur);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [isMobile]);
+
+  // Foco automático do input em mobile
+  useEffect(() => {
+    if (isMobile) {
+      // Pequeno delay para o browser permitir o focus
+      const t = setTimeout(() => inputRef.current?.focus(), 100);
+      return () => clearTimeout(t);
+    }
+  }, [isMobile]);
+
+  // Clicar em qualquer sítio → foca o input
+  const handleClick = () => {
+    inputRef.current?.focus();
+    setFocused(true);
+  };
+
+  const handleRefocus = () => {
+    setFocused(true);
+    inputRef.current?.focus();
+  };
+
+  if (finished && stats) {
+    return <Results stats={stats} onRestart={reset} />;
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 w-full">
+      {/* Timer — modo tempo */}
+      {config.mode === "time" && started && (
+        <div className="text-accent font-mono text-2xl mb-6 text-center">
+          {Math.ceil(timeLeft ?? 0)}s
+        </div>
+      )}
+
+      {/* Contagem — modo palavras */}
+      {config.mode === "words" && (
+        <div className="text-sub font-mono text-sm mb-6 text-center">
+          {Math.min(currentWord + 1, words.length)}
+          <span className="text-sub/50"> / </span>
+          {words.length}
+        </div>
+      )}
+
+      <div className="relative" onClick={handleClick}>
+        <HiddenInput
+          ref={inputRef}
+          onInput={handleInput}
+          onKeyDown={handleKeyDownInput}
+        />
+
+        {!focused && !isMobile && (
+          <div
+            onClick={handleRefocus}
+            className="absolute inset-0 z-10 flex items-center justify-center backdrop-blur-sm bg-bg/40 cursor-pointer rounded"
+          >
+            <span className="text-sub text-sm">Clica para focar</span>
+          </div>
+        )}
+
+        <div
+          className="overflow-hidden"
+          style={{ height: `calc(${lineHeightRem}rem * ${linesVisible})` }}
+        >
+          <div
+            ref={containerRef}
+            className={`relative flex flex-wrap ${gap} ${fontSize} font-mono leading-relaxed select-none transition-transform duration-200 ease-out`}
+            style={{ transform: `translateY(-${offsetY}px)` }}
+          >
+            <Caret targetRef={activeRef} />
+            {words.map((w, i) => (
+              <Word
+                key={i}
+                data={w}
+                activeChar={i === currentWord ? currentChar : null}
+                isPast={i < currentWord}
+                setActiveRef={setRef}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {!started && (
+        <p className="mt-8 text-sub text-sm text-center">
+          {isMobile
+            ? "Toca no texto para abrir o teclado"
+            : "Começa a digitar para iniciar · Tab ou Esc para reiniciar"}
+        </p>
+      )}
+    </div>
+  );
 }
