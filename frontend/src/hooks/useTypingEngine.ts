@@ -6,6 +6,10 @@ import { calculateStats } from "../lib/metrics";
 import { useConfig } from "../store/config";
 import { saveResult } from "../lib/storage";
 import type { WordData, TypingStats } from "../types";
+import { useAuth } from "../store/auth";
+import { resultsApi } from "../lib/api";
+
+
 
 function buildWords(words: string[]): WordData[] {
   return words.map((w) => ({
@@ -26,6 +30,9 @@ export function useTypingEngine() {
   const { config } = useConfig();
   const wordCount = config.mode === "words" ? config.wordCount : 50;
 
+
+
+
   const [words, setWords] = useState<WordData[]>(() =>
     buildWords(generateWords(wordCount))
   );
@@ -42,6 +49,52 @@ export function useTypingEngine() {
   const wpmSamplesRef = useRef<number[]>([]);
   const lastSampleRef = useRef(0);
   const finishedRef = useRef(false);
+
+
+  const { user } = useAuth();
+
+  const finish = useCallback(() => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+
+    const elapsedSec = startTimeRef.current
+      ? (performance.now() - startTimeRef.current) / 1000
+      : 0;
+
+    const s = calculateStats(
+      correctCharsRef.current,
+      incorrectCharsRef.current,
+      elapsedSec,
+      wpmSamplesRef.current
+    );
+    setStats(s);
+    setFinished(true);
+
+    // Sempre guarda local
+    saveResult(s, config);
+
+    // Se logado, envia ao servidor (fire-and-forget)
+    if (user) {
+      resultsApi
+        .create({
+          wpm: s.wpm,
+          raw: s.raw,
+          accuracy: s.accuracy,
+          consistency: s.consistency,
+          correct_chars: s.correctChars,
+          incorrect_chars: s.incorrectChars,
+          total_chars: s.totalChars,
+          time_seconds: s.timeSeconds,
+          mode: config.mode,
+          source: config.source,
+          duration: config.mode === "time" ? config.time : config.wordCount,
+          punctuation: config.punctuation,
+          numbers: config.numbers,
+          language: config.language,
+        })
+        .catch((e) => console.error("Erro ao enviar resultado:", e));
+    }
+  }, [config, user]);
 
   // Reset total
   const reset = useCallback(() => {
@@ -92,25 +145,30 @@ export function useTypingEngine() {
     reset();
   }, [reset]);
 
-  const finish = useCallback(() => {
-    if (finishedRef.current) return;
-    finishedRef.current = true;
 
-    const elapsedSec = startTimeRef.current
-      ? (performance.now() - startTimeRef.current) / 1000
-      : 0;
+  // const finish = useCallback(() => {
+  //   if (finishedRef.current) return;
+  //   finishedRef.current = true;
 
-    const s = calculateStats(
-      correctCharsRef.current,
-      incorrectCharsRef.current,
-      elapsedSec,
-      wpmSamplesRef.current
-    );
-    setStats(s);
-    setFinished(true);
-    saveResult(s, config);
-  }, [config]);
+  //   const elapsedSec = startTimeRef.current
+  //     ? (performance.now() - startTimeRef.current) / 1000
+  //     : 0;
 
+  //   const s = calculateStats(
+  //     correctCharsRef.current,
+  //     incorrectCharsRef.current,
+  //     elapsedSec,
+  //     wpmSamplesRef.current
+  //   );
+  //   setStats(s);
+  //   setFinished(true);
+  //   saveResult(s, config);
+  // }, [config]);
+
+  
+  
+  
+  
   // Timer (modo tempo)
   useEffect(() => {
     if (!started || finished) return;
@@ -290,4 +348,5 @@ export function useTypingEngine() {
     handleInput,
     handleKeyDownInput,
   };
+
 }

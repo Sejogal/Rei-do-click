@@ -52,3 +52,10 @@ export function getAggregate() {
 
   return { count: results.length, bestWpm, avgWpm, avgAccuracy, avgConsistency, totalTime };
 }
+
+export interface LocalResult {
+  id: string;
+  timestamp: number;
+  stats: TypingStats;
+  config: TestConfig;
+}
