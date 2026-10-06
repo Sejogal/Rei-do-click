@@ -24,7 +24,7 @@ function buildFromText(text: string): WordData[] {
 
 export function useTypingEngine() {
   const { config } = useConfig();
-  const wordCount = config.mode === "words" ? config.wordCount : 120;
+  const wordCount = config.mode === "words" ? config.wordCount : 50;
 
   const [words, setWords] = useState<WordData[]>(() =>
     buildWords(generateWords(wordCount))
@@ -43,7 +43,7 @@ export function useTypingEngine() {
   const lastSampleRef = useRef(0);
   const finishedRef = useRef(false);
 
-  // Reset total — chamado no início e quando a config muda
+  // Reset total
   const reset = useCallback(() => {
     finishedRef.current = false;
 
@@ -88,12 +88,10 @@ export function useTypingEngine() {
     config.customText,
   ]);
 
-  // Reset sempre que a config muda
   useEffect(() => {
     reset();
   }, [reset]);
 
-  // Finalizar teste
   const finish = useCallback(() => {
     if (finishedRef.current) return;
     finishedRef.current = true;
@@ -130,23 +128,42 @@ export function useTypingEngine() {
     return () => clearInterval(interval);
   }, [started, finished, config.mode, config.time, finish]);
 
-  // Lógica de uma tecla/caractere
+  // Gera mais palavras em modo tempo (só source=words)
+  // ⚠️ NÃO adicionar words.length às deps — causa loop infinito
+  useEffect(() => {
+    if (config.mode !== "time") return;
+    if (config.source !== "words") return;
+    if (finishedRef.current) return;
+    if (currentWord < words.length - 15) return;
+
+    const more = buildWords(
+      generateWords(30, {
+        language: config.language,
+        punctuation: config.punctuation,
+        numbers: config.numbers,
+      })
+    );
+    setWords((prev) => [...prev, ...more]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentWord]);
+
   const handleKey = useCallback(
     (key: string) => {
       if (finished) return;
 
-      if (!started && key.length === 1) {
-        setStarted(true);
+      // Primeira tecla válida: arranca o teste (síncrono via ref)
+      if (!startTimeRef.current && key.length === 1) {
         startTimeRef.current = performance.now();
         lastSampleRef.current = performance.now();
+        setStarted(true);
       }
 
-      if (!started && key !== "Backspace") return;
-      if (!started) return;
+      // Sem tempo inicial → ignora (ex: backspace antes de começar)
+      if (!startTimeRef.current) return;
 
       // Amostra de WPM por segundo
       const now = performance.now();
-      if (now - lastSampleRef.current >= 1000 && startTimeRef.current) {
+      if (now - lastSampleRef.current >= 1000) {
         const elapsedSec = (now - startTimeRef.current) / 1000;
         const wpm = (correctCharsRef.current / 5 / elapsedSec) * 60;
         wpmSamplesRef.current.push(wpm);
@@ -159,9 +176,14 @@ export function useTypingEngine() {
       // Espaço → próxima palavra
       if (key === " ") {
         if (currentChar === 0) return;
+
+        const isLastWord = currentWord === words.length - 1;
+        const isFiniteSource = config.source !== "words";
+
         setCurrentWord((w) => w + 1);
         setCurrentChar(0);
-        if (currentWord === words.length - 1) {
+
+        if ((config.mode === "words" || isFiniteSource) && isLastWord) {
           finish();
         }
         return;
@@ -184,7 +206,6 @@ export function useTypingEngine() {
 
       const expected = word.chars[currentChar];
 
-      // Extra chars (além do tamanho da palavra)
       if (!expected) {
         word.chars.push({ char: key, state: "extra" });
         incorrectCharsRef.current++;
@@ -204,10 +225,9 @@ export function useTypingEngine() {
       setWords([...words]);
       setCurrentChar((c) => c + 1);
     },
-    [words, currentWord, currentChar, started, finished, finish]
+    [words, currentWord, currentChar, finished, finish, config.mode, config.source]
   );
 
-  // Handler para desktop (keydown global)
   const handleKeyDownWindow = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "Tab" || e.key === "Escape") {
@@ -226,7 +246,6 @@ export function useTypingEngine() {
     [handleKey, reset]
   );
 
-  // Handler para o input escondido (mobile)
   const handleInput = useCallback(
     (value: string) => {
       for (const char of value) {
@@ -246,7 +265,6 @@ export function useTypingEngine() {
     [handleKey]
   );
 
-  // Listener global (desktop) — ignora se for touch
   useEffect(() => {
     const isTouch =
       typeof window !== "undefined" &&
