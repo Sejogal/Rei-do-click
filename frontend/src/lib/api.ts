@@ -113,3 +113,10 @@ export const resultsApi = {
 
   stats: () => request<ResultStats>("/results/stats"),
 };
+
+export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
+  return request<T>(path, {
+    method: "POST",
+    body: body ? JSON.stringify(body) : undefined,
+  });
+}
