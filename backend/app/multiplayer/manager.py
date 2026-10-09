@@ -10,10 +10,17 @@ class ConnectionManager:
     def __init__(self):
         self.rooms: dict[str, Room] = {}
         self.matchmake_lock = asyncio.Lock()  
+        self.online_users: set[str] = set()
 
     # ─── Salas ─────────────────────────────────────
 
-    def create_room(self, host_id: str, room_id: str | None = None) -> Room:
+    def create_room(
+        self,
+        host_id: str,
+        room_id: str | None = None,
+        is_private: bool = False,
+        max_players: int = 4,
+    ) -> Room:
         # `room_id` explícito (usado por app/routers/ws.py ao criar a sala
         # para um room_id da URL que ainda não existe): antes a sala nascia
         # com um id aleatório e era "renomeada" por fora (room.id = room_id)
@@ -23,7 +30,7 @@ class ConnectionManager:
         # orfã para sempre: vazia, "waiting", e o find_available_room()
         # voltava sempre a encontrá-la e a devolver o mesmo room_id antigo.
         room_id = room_id or uuid.uuid4().hex[:6].upper()  # ex: "A1B2C3"
-        room = Room(id=room_id, host_id=host_id)
+        room = Room(id=room_id, host_id=host_id, is_private=is_private, max_players=max_players, max_allowed_players=max_players)
         self.rooms[room_id] = room
         return room
 
@@ -33,7 +40,7 @@ class ConnectionManager:
     def find_available_room(self) -> Room | None:
         """Devolve a primeira sala em waiting com espaço."""
         for room in self.rooms.values():
-            if room.status == "waiting" and not room.is_full():
+            if room.status == "waiting" and not room.is_full() and not room.is_private:
                 return room
         return None
 
@@ -72,11 +79,11 @@ class ConnectionManager:
             if room:
                 room.remove_player(player.id)
 
-    async def matchmake(self, host_id: str = "") -> Room:
+    async def matchmake(self, host_id: str = "", max_players: int = 4) -> Room:
         async with self.matchmake_lock:
             room = self.find_available_room()
             if not room:
-                room = self.create_room(host_id=host_id)
+                room = self.create_room(host_id=host_id, max_players=max_players)
             return room
 
 manager = ConnectionManager()

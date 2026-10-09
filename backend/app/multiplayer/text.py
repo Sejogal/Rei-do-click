@@ -25,6 +25,7 @@ WORDS_EN = [
 ]
 
 PUNCT = [",", ".", ";", ":", "!", "?", "-", "'"]
+SURVIVAL_WORDS = ["extraordinario", "responsabilidade", "desenvolvimento", "computadores", "possibilidade", "conhecimento", "transformacao", "inacreditavel", "velocidade", "competicao", "estrategia", "concentracao", "persistencia", "programacao", "criatividade"]
 
 
 def generate_race_text(
@@ -50,3 +51,19 @@ def generate_race_text(
         words[0] = words[0][0].upper() + words[0][1:]
 
     return " ".join(words)
+
+
+def generate_survival_text(words_per_level: int = 10, levels: int = 5) -> str:
+    """Gera blocos progressivamente mais exigentes para o modo sobrevivência."""
+    output: list[str] = []
+    for level in range(levels):
+        for _ in range(words_per_level):
+            word = random.choice(SURVIVAL_WORDS if level >= 2 else WORDS_PT)
+            if level >= 1 and random.random() < min(0.75, level * 0.18):
+                word += random.choice(PUNCT)
+            if level >= 3 and random.random() < 0.18:
+                word = str(random.randint(100, 99999))
+            output.append(word)
+    if output:
+        output[0] = output[0][0].upper() + output[0][1:]
+    return " ".join(output)

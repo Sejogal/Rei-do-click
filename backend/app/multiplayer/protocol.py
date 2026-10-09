@@ -31,12 +31,30 @@ class LeaveMessage(BaseModel):
     type: Literal["leave"]
 
 
+class ChatMessage(BaseModel):
+    type: Literal["chat"]
+    text: str = Field(min_length=1, max_length=200)
+
+
+class SetGameModeMessage(BaseModel):
+    type: Literal["set_game_mode"]
+    mode: Literal["race", "elimination", "survival", "blind", "relay"]
+
+
+class SetMaxPlayersMessage(BaseModel):
+    type: Literal["set_max_players"]
+    max_players: int = Field(ge=2, le=20)
+
+
 ClientMessage = (
     JoinRoomMessage
     | ReadyMessage
     | ProgressMessage
     | FinishedMessage
     | LeaveMessage
+    | ChatMessage
+    | SetGameModeMessage
+    | SetMaxPlayersMessage
 )
 
 
@@ -50,6 +68,9 @@ class PlayerState(BaseModel):
     wpm: float = 0
     word: int = 0
     char: int = 0
+    team_id: str | None = None
+    relay_start: int | None = None
+    relay_end: int | None = None
 
 
 class RoomStateMessage(BaseModel):
@@ -58,6 +79,9 @@ class RoomStateMessage(BaseModel):
     players: list[PlayerState]
     status: Literal["waiting", "countdown", "racing", "finished"]
     host_id: str
+    max_players: int = 4
+    game_mode: Literal["race", "elimination", "survival", "blind", "relay"] = "race"
+    eliminated: list[str] = Field(default_factory=list)
 
 
 class CountdownMessage(BaseModel):
@@ -69,6 +93,7 @@ class RaceStartMessage(BaseModel):
     type: Literal["race_start"] = "race_start"
     text: str
     start_at: float  # timestamp UNIX (server) para sync
+    blind_timeout: int = 10
 
 
 class PlayerProgressMessage(BaseModel):
@@ -87,9 +112,37 @@ class PlayerFinishedMessage(BaseModel):
     position: int  # 1º, 2º, 3º, 4º
 
 
+class TeamState(BaseModel):
+    team_id: str
+    position: int
+    players: list[str]
+    average_wpm: float
+
+
 class RaceEndMessage(BaseModel):
     type: Literal["race_end"] = "race_end"
     ranking: list[PlayerState]
+    teams: list[TeamState] = Field(default_factory=list)
+
+
+class ChatBroadcast(BaseModel):
+    type: Literal["chat"] = "chat"
+    player_id: str
+    username: str
+    text: str
+
+
+class AchievementsUnlockedMessage(BaseModel):
+    type: Literal["achievements_unlocked"] = "achievements_unlocked"
+    codes: list[str]
+
+
+class PlayerEliminatedMessage(BaseModel):
+    type: Literal["player_eliminated"] = "player_eliminated"
+    player_id: str
+    username: str
+    position: int
+    wpm: float
 
 
 class ErrorMessage(BaseModel):
@@ -104,5 +157,8 @@ ServerMessage = (
     | PlayerProgressMessage
     | PlayerFinishedMessage
     | RaceEndMessage
+    | ChatBroadcast
+    | AchievementsUnlockedMessage
+    | PlayerEliminatedMessage
     | ErrorMessage
 )

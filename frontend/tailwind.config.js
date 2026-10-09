@@ -4,12 +4,12 @@ export default {
   theme: {
     extend: {
       colors: {
-        bg: "#0f0f10",
-        surface: "#1a1a1c",
-        text: "#e2e2e2",
-        sub: "#646669",
-        accent: "#e2b714",
-        error: "#ca4754",
+        bg: "rgb(var(--color-bg) / <alpha-value>)",
+        surface: "rgb(var(--color-surface) / <alpha-value>)",
+        text: "rgb(var(--color-text) / <alpha-value>)",
+        sub: "rgb(var(--color-sub) / <alpha-value>)",
+        accent: "rgb(var(--color-accent) / <alpha-value>)",
+        error: "rgb(var(--color-error) / <alpha-value>)",
       },
       fontFamily: {
         mono: ["JetBrains Mono", "monospace"],

@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 260" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgPlate" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#141418"/>
+      <stop offset="100%" stop-color="#0c0d10"/>
+    </linearGradient>
+    <linearGradient id="goldPure" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffe664"/>
+      <stop offset="50%" stop-color="#e2b714"/>
+      <stop offset="100%" stop-color="#b88f08"/>
+    </linearGradient>
+    <linearGradient id="amberGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffd43b" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#ffd43b" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Canvas Frame Background -->
+  <rect width="900" height="260" rx="28" fill="url(#bgPlate)" stroke="#23252d" stroke-width="2"/>
+
+  <!-- SYMBOL ICON: Integrated Isometric Mechanical Keycap + Royal Crown -->
+  <g transform="translate(60, 42)">
+    <!-- Ambient back glow -->
+    <circle cx="85" cy="88" r="75" fill="#e2b714" opacity="0.12" filter="url(#softGlow)"/>
+
+    <!-- Keycap 3D Chamfered Block -->
+    <!-- Base Shadow -->
+    <path d="M 85 18 L 155 58 L 155 125 L 85 168 L 15 125 L 15 58 Z" fill="#181920" stroke="#2e303c" stroke-width="2"/>
+    <path d="M 85 18 L 155 58 L 85 100 L 15 58 Z" fill="#252733"/>
+    <path d="M 15 58 L 85 100 L 85 168 L 15 125 Z" fill="#1d1e26"/>
+    <path d="M 85 100 L 155 58 L 155 125 L 85 168 Z" fill="#15161c"/>
+
+    <!-- Geometric Crown embedded cleanly on top face & emerging -->
+    <!-- Crown Base Line -->
+    <polygon points="50,72 85,90 120,72 85,54" fill="url(#goldPure)" opacity="0.3"/>
+
+    <!-- Sharp Majestic Crown -->
+    <path d="M 45 66 L 48 26 L 68 46 L 85 12 L 102 46 L 122 26 L 125 66 Z" fill="url(#goldPure)" filter="url(#softGlow)"/>
+    <!-- Crown Jewels / Mechanical switch markers -->
+    <circle cx="48" cy="22" r="3.5" fill="#ffffff"/>
+    <circle cx="85" cy="8" r="4.5" fill="#ffffff"/>
+    <circle cx="122" cy="22" r="3.5" fill="#ffffff"/>
+    <!-- Tactile Click Pulse Indicator under Crown -->
+    <line x1="65" y1="130" x2="105" y2="130" stroke="#e2b714" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="85" cy="144" r="3" fill="#e2b714"/>
+  </g>
+
+  <!-- TYPOGRAPHY / WORDFACE GROUP -->
+  <g transform="translate(265, 70)">
+    <!-- Sub-badge category -->
+    <rect x="0" y="0" width="138" height="26" rx="6" fill="#e2b714" fill-opacity="0.14" stroke="#e2b714" stroke-opacity="0.3" stroke-width="1"/>
+    <text x="14" y="17" font-family="'JetBrains Mono', 'Space Mono', monospace" font-size="11" font-weight="700" fill="#e2b714" letter-spacing="2.5">SPEED • COMBAT</text>
+
+    <!-- Main Wordmark -->
+    <g transform="translate(0, 72)">
+      <!-- 'rei' in crisp Monkeytype cream -->
+      <text x="0" y="0" font-family="'Plus Jakarta Sans', 'Inter', system-ui, sans-serif" font-size="64" font-weight="800" fill="#ffffff" letter-spacing="-1.5">REI</text>
+      
+      <!-- 'DO' in badge pill / contrast gold -->
+      <g transform="translate(132, -48)">
+        <rect x="0" y="8" width="54" height="46" rx="10" fill="#e2b714"/>
+        <text x="11" y="41" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="28" font-weight="900" fill="#121316" letter-spacing="0">DO</text>
+      </g>
+
+      <!-- 'CLIQUE' bold mechanical monospace typography -->
+      <text x="198" y="0" font-family="'Plus Jakarta Sans', 'Inter', system-ui, sans-serif" font-size="64" font-weight="900" fill="#e2b714" letter-spacing="-1.5">CLIQUE</text>
+      <!-- Cursor blinking indicator bar -->
+      <rect x="496" y="-52" width="6" height="54" rx="3" fill="#ffd43b" opacity="0.95" filter="url(#softGlow)"/>
+    </g>
+
+    <!-- Slogan / Tagline -->
+    <text x="4" y="112" font-family="'JetBrains Mono', monospace" font-size="15" font-weight="500" fill="#7d808c" letter-spacing="1">
+      O TORNEIO DEFINITIVO DE DIGITAÇÃO MECÂNICA
+    </text>
+  </g>
+</svg>

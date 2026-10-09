@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="neonBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#18181f"/>
+      <stop offset="100%" stop-color="#0e0e11"/>
+    </linearGradient>
+    <filter id="neonGlowYellow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="0" stdDeviation="5" flood-color="#ffd43b" flood-opacity="0.9"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="10" flood-color="#e2b714" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <!-- Outer squircle frame -->
+  <rect x="6" y="6" width="116" height="116" rx="30" fill="url(#neonBg)" stroke="#2f313d" stroke-width="2"/>
+
+  <!-- Minimal mechanical switch stem / key silhouette -->
+  <rect x="22" y="22" width="84" height="84" rx="20" fill="#1e2029" stroke="#ffd43b" stroke-width="2" stroke-dasharray="8 4" opacity="0.4"/>
+
+  <!-- Stylized Monogram Crown + Click Pulse -->
+  <!-- Crown sharp geometry -->
+  <path d="M 28 80 L 34 46 L 50 62 L 64 34 L 78 62 L 94 46 L 100 80 Z" fill="#ffd43b" filter="url(#neonGlowYellow)"/>
+  <rect x="28" y="84" width="72" height="6" rx="3" fill="#ffffff" filter="url(#neonGlowYellow)"/>
+
+  <!-- Mechanical cursor dot / typing point indicator -->
+  <circle cx="64" cy="100" r="4" fill="#ffd43b"/>
+  <rect x="44" y="99" width="8" height="2" rx="1" fill="#646669"/>
+  <rect x="76" y="99" width="8" height="2" rx="1" fill="#646669"/>
+</svg>

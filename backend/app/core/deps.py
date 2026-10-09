@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
@@ -33,4 +35,29 @@ def get_current_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User inativo",
         )
+    plan_code = user.plan.strip().lower()
+    plan_changed = plan_code != user.plan
+    if plan_changed:
+        user.plan = plan_code
+    expires_at = user.plan_expires_at
+    if plan_code in {"pro", "team"} and expires_at is not None:
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at <= datetime.now(timezone.utc):
+            user.plan = "free"
+            user.plan_started_at = None
+            user.plan_expires_at = None
+            user.plan_cancel_at_period_end = False
+            plan_changed = True
+    if plan_changed:
+        db.commit()
     return user
+
+
+def get_current_admin(current_user: User = Depends(get_current_user)) -> User:
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso reservado à administração",
+        )
+    return current_user

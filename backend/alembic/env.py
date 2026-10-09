@@ -7,7 +7,7 @@ from alembic import context
 from app.config import settings
 from app.database import Base
 # ⚠️ Importa os modelos para que o Alembic os detete
-from app.models import user  # noqa: F401
+from app import models  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

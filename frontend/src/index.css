@@ -1,20 +1,61 @@
 @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap");
 @import "tailwindcss";
+@config "../tailwind.config.js";
+
+:root,
+[data-theme="default"] {
+  --color-bg: 15 15 16;
+  --color-surface: 26 26 28;
+  --color-text: 226 226 226;
+  --color-sub: 100 102 105;
+  --color-accent: 226 183 20;
+  --color-error: 202 71 84;
+}
+
+[data-theme="dracula"] {
+  --color-bg: 40 42 54;
+  --color-surface: 68 71 90;
+  --color-text: 248 248 242;
+  --color-sub: 98 114 164;
+  --color-accent: 189 147 249;
+  --color-error: 255 85 85;
+}
+
+[data-theme="nord"] {
+  --color-bg: 46 52 64;
+  --color-surface: 59 66 82;
+  --color-text: 216 222 233;
+  --color-sub: 76 86 106;
+  --color-accent: 136 192 208;
+  --color-error: 191 97 106;
+}
+
+[data-theme="light"] {
+  --color-bg: 245 245 245;
+  --color-surface: 255 255 255;
+  --color-text: 40 40 40;
+  --color-sub: 150 150 150;
+  --color-accent: 200 150 0;
+  --color-error: 200 50 50;
+}
+
+[data-theme="cyberpunk"] {
+  --color-bg: 10 10 30;
+  --color-surface: 20 20 50;
+  --color-text: 220 240 255;
+  --color-sub: 100 130 200;
+  --color-accent: 255 0 200;
+  --color-error: 255 80 80;
+}
 
 @theme {
-  --color-bg: #0f0f10;
-  --color-surface: #1a1a1c;
-  --color-text: #e2e2e2;
-  --color-sub: #646669;
-  --color-accent: #e2b714;
-  --color-error: #ca4754;
   --font-mono: "JetBrains Mono", monospace;
 }
 
 html, body, #root {
   height: 100%;
-  background: #0f0f10;
-  color: #e2e2e2;
+  background: rgb(var(--color-bg));
+  color: rgb(var(--color-text));
 }
 
 /* Evita zoom ao dar tap duplo */
@@ -41,4 +82,20 @@ input[type="text"] {
 /* Impede scroll elástico quando o teclado abre */
 html, body {
   overscroll-behavior: none;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pop {
+  0% { transform: scale(0.5); opacity: 0; }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: translateX(0); }
 }

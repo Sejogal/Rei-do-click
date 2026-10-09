@@ -25,6 +25,10 @@ class Player:
     # um "finished" real. Usado por Room.get_ranking() para garantir que
     # quem desiste fica sempre atrás de quem terminou mesmo a corrida.
     left_race: bool = False
+    wpm_at_leave: float = 0.0
+    team_id: str | None = None
+    relay_start: int | None = None
+    relay_end: int | None = None
 
 
 @dataclass
@@ -43,6 +47,15 @@ class Room:
     # ranking final mesmo que os restantes só terminem depois — ver
     # app/routers/ws.py, bloco `finally`.
     left_players: list[Player] = field(default_factory=list)
+    is_private: bool = False
+    max_players: int = 4
+    max_allowed_players: int = 4
+    match_persisted: bool = False
+    finalizing: bool = False
+    game_mode: Literal["race", "elimination", "survival", "blind", "relay"] = "race"
+    elimination_interval: int = 10
+    eliminated: list[Player] = field(default_factory=list)
+    last_elimination_word: int = 0
 
     # ─── Gestão de jogadores ───────────────────────
 
@@ -55,7 +68,23 @@ class Room:
             self.host_id = next(iter(self.players.keys()))
 
     def is_full(self) -> bool:
-        return len(self.players) >= 4
+        return len(self.players) >= self.max_players
+
+    def set_max_players(self, new_max: int) -> list[Player]:
+        """Reduce the room limit, preserving the host and newest-entry order."""
+        if not 2 <= new_max <= self.max_allowed_players:
+            raise ValueError(f"max_players must be between 2 and {self.max_allowed_players}")
+
+        players_list = list(self.players.values())
+        candidates = [player for player in reversed(players_list) if player.id != self.host_id]
+        removed: list[Player] = []
+        while len(self.players) - len(removed) > new_max and candidates:
+            removed.append(candidates.pop(0))
+
+        for player in removed:
+            self.players.pop(player.id, None)
+        self.max_players = new_max
+        return removed
 
     def is_empty(self) -> bool:
         return len(self.players) == 0
@@ -73,6 +102,10 @@ class Room:
         self.race_start_at = 0.0
         self.finished_count = 0
         self.left_players = []
+        self.match_persisted = False
+        self.finalizing = False
+        self.eliminated = []
+        self.last_elimination_word = 0
         for p in self.players.values():
             p.ready = False
             p.finished = False
@@ -82,8 +115,21 @@ class Room:
             p.word = 0
             p.char = 0
             p.finish_position = None
+            p.wpm_at_leave = 0.0
+            p.team_id = None
+            p.relay_start = None
+            p.relay_end = None
 
     def get_ranking(self) -> list[Player]:
+        if self.game_mode == "elimination":
+            eliminated_ids = {player.id for player in self.eliminated}
+            survivors = [p for p in self.players.values() if p.id not in eliminated_ids]
+            survivors.sort(key=lambda p: (
+                not p.finished,
+                p.finish_position if p.finish_position is not None else 999,
+                -(p.word * 1000 + p.char),
+            ))
+            return survivors + list(reversed(self.eliminated))
         """Jogadores (activos + os que desistiram a meio) ordenados por
         posição de chegada. Quem desistiu (`left_race=True`) fica sempre
         depois de quem terminou mesmo a corrida, não importa quando saiu em
