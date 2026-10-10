@@ -112,8 +112,10 @@ export const usersApi = {
 };
 
 export interface FriendItem { id: string; username: string; is_online?: boolean; friendship_id?: string }
+export interface FriendSearchResult { id: string; username: string; relationship: "none" | "friends" | "pending_sent" | "pending_received"; friendship_id: string | null }
 export interface SocialNotification { id: string; type: string; payload: Record<string, string>; read: boolean; created_at: string }
 export const friendsApi = {
+  search: (query: string) => request<FriendSearchResult[]>(`/friends/search?q=${encodeURIComponent(query)}`),
   list: () => request<FriendItem[]>("/friends"),
   pending: () => request<Array<{ id: string; username: string }>>("/friends/pending"),
   sent: () => request<Array<{ id: string; username: string }>>("/friends/sent"),

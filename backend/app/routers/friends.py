@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
@@ -23,6 +23,32 @@ class FriendRequest(BaseModel):
 
 class RoomInviteRequest(BaseModel):
     room_id: str = Field(min_length=1, max_length=20)
+
+
+@router.get("/search")
+def search_users(q: str = Query(min_length=2, max_length=50), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    term = q.strip()
+    if len(term) < 2:
+        raise HTTPException(422, "Escreve pelo menos duas letras para procurar")
+    matches = (db.query(User)
+        .filter(User.is_active.is_(True), User.id != user.id, User.username.ilike(f"%{term}%"))
+        .order_by(User.username.asc()).limit(10).all())
+    relations = db.query(Friendship).filter(or_(Friendship.user_id == user.id, Friendship.friend_id == user.id)).all()
+    relation_by_user: dict[str, tuple[str, str | None]] = {}
+    for relation in relations:
+        other_id = relation.friend_id if relation.user_id == user.id else relation.user_id
+        if relation.status == "accepted":
+            relation_by_user[str(other_id)] = ("friends", str(relation.id))
+        elif relation.user_id == user.id:
+            relation_by_user[str(other_id)] = ("pending_sent", str(relation.id))
+        else:
+            relation_by_user[str(other_id)] = ("pending_received", str(relation.id))
+    return [{
+        "id": str(target.id),
+        "username": target.username,
+        "relationship": relation_by_user.get(str(target.id), ("none", None))[0],
+        "friendship_id": relation_by_user.get(str(target.id), (None, None))[1],
+    } for target in matches]
 
 
 @router.post("/request", status_code=201)

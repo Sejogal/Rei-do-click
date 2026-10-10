@@ -49,6 +49,7 @@ export function useTypingEngine() {
   const wpmSamplesRef = useRef<number[]>([]);
   const lastSampleRef = useRef(0);
   const finishedRef = useRef(false);
+  const lastExtensionWordRef = useRef(-1);
 
 
   const { user } = useAuth();
@@ -99,6 +100,7 @@ export function useTypingEngine() {
   // Reset total
   const reset = useCallback(() => {
     finishedRef.current = false;
+    lastExtensionWordRef.current = -1;
 
     let newWords: WordData[];
 
@@ -186,24 +188,45 @@ export function useTypingEngine() {
     return () => clearInterval(interval);
   }, [started, finished, config.mode, config.time, finish]);
 
-  // Gera mais palavras em modo tempo (só source=words)
-  // ⚠️ NÃO adicionar words.length às deps — causa loop infinito
+  // Em modo tempo, mantém texto suficiente à frente do cursor.
+  // Depende do índice da palavra, para gerar apenas ao avançar, sem loop
+  // quando o array de palavras é ampliado.
   useEffect(() => {
-    if (config.mode !== "time") return;
-    if (config.source !== "words") return;
-    if (finishedRef.current) return;
+    if (config.mode !== "time" || finishedRef.current) return;
     if (currentWord < words.length - 15) return;
+    if (lastExtensionWordRef.current === currentWord) return;
 
-    const more = buildWords(
-      generateWords(30, {
+    lastExtensionWordRef.current = currentWord;
+
+    let moreWords: WordData[];
+    if (config.source === "quote") {
+      moreWords = buildFromText(getRandomQuote(config.language).text);
+    } else if (config.source === "code") {
+      moreWords = buildFromText(getRandomSnippet().text);
+    } else if (config.source === "custom" && config.customText) {
+      moreWords = buildFromText(config.customText);
+    } else {
+      moreWords = buildWords(generateWords(30, {
         language: config.language,
         punctuation: config.punctuation,
         numbers: config.numbers,
-      })
-    );
-    setWords((prev) => [...prev, ...more]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentWord]);
+      }));
+    }
+
+    if (moreWords.length > 0) {
+      setWords((previous) => [...previous, ...moreWords]);
+    }
+  }, [
+    currentWord,
+    words.length,
+    config.mode,
+    config.source,
+    config.language,
+    config.punctuation,
+    config.numbers,
+    config.customText,
+  ]);
+
 
   const handleKey = useCallback(
     (key: string) => {
@@ -236,12 +259,10 @@ export function useTypingEngine() {
         if (currentChar === 0) return;
 
         const isLastWord = currentWord === words.length - 1;
-        const isFiniteSource = config.source !== "words";
-
-        setCurrentWord((w) => w + 1);
+        setCurrentWord((wordIndex) => wordIndex + 1);
         setCurrentChar(0);
 
-        if ((config.mode === "words" || isFiniteSource) && isLastWord) {
+        if (config.mode === "words" && isLastWord) {
           finish();
         }
         return;
@@ -283,11 +304,20 @@ export function useTypingEngine() {
       setWords([...words]);
       setCurrentChar((c) => c + 1);
     },
-    [words, currentWord, currentChar, finished, finish, config.mode, config.source]
+    [words, currentWord, currentChar, finished, finish, config.mode, config.source, config.language, config.punctuation, config.numbers, config.customText]
   );
 
   const handleKeyDownWindow = useCallback(
     (e: KeyboardEvent) => {
+      // Quando o input oculto está focado, os caracteres chegam por onInput.
+      // Ignorar o keydown aqui evita processar cada tecla duas vezes.
+      const isTypingInput = e.target instanceof HTMLInputElement;
+      const isResetShortcut =
+        e.key === "Tab" ||
+        e.key === "Escape" ||
+        ((e.metaKey || e.ctrlKey) && e.key === "Enter");
+      if (isTypingInput && !isResetShortcut) return;
+
       if (e.key === "Tab" || e.key === "Escape") {
         e.preventDefault();
         reset();

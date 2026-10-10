@@ -8,13 +8,33 @@ export function PublicProfile() {
   const currentUser = useAuth((state) => state.user);
   const [data, setData] = useState<PublicProfileData | null>(null);
   const [error, setError] = useState("");
-  const [friendState, setFriendState] = useState("");
+  const [friendError, setFriendError] = useState("");
+  const [friendState, setFriendState] = useState<"checking" | "none" | "friends" | "pending_sent" | "pending_received">("checking");
+  const [incomingRequestId, setIncomingRequestId] = useState<string | null>(null);
   useEffect(() => {
     let active = true;
     usersApi.publicProfile(username).then((result) => { if (active) setData(result); })
       .catch((e) => { if (active) setError((e as Error).message); });
     return () => { active = false; };
   }, [username]);
+  useEffect(() => {
+    const targetUsername = data?.profile.username;
+    if (!currentUser || !targetUsername || currentUser.username === targetUsername) {
+      setFriendState("none");
+      return;
+    }
+    let active = true;
+    setFriendState("checking");
+    void Promise.all([friendsApi.list(), friendsApi.pending(), friendsApi.sent()]).then(([friends, pending, sent]) => {
+      if (!active) return;
+      const friend = friends.find((item) => item.username.toLowerCase() === targetUsername.toLowerCase());
+      const incoming = pending.find((item) => item.username.toLowerCase() === targetUsername.toLowerCase());
+      const outgoing = sent.some((item) => item.username.toLowerCase() === targetUsername.toLowerCase());
+      setIncomingRequestId(incoming?.id ?? null);
+      setFriendState(friend ? "friends" : incoming ? "pending_received" : outgoing ? "pending_sent" : "none");
+    }).catch((e) => { if (active) { setFriendState("none"); setFriendError((e as Error).message); } });
+    return () => { active = false; };
+  }, [currentUser?.id, currentUser?.username, data?.profile.username]);
 
   if (error) return <main className="mx-auto flex-1 max-w-4xl px-4 py-12"><p role="alert" className="text-error">{error}</p><Link to="/leaderboard" className="mt-4 inline-block text-accent">Voltar ao ranking</Link></main>;
   if (!data) return <main className="flex flex-1 items-center justify-center text-sub">A carregar perfil…</main>;
@@ -24,8 +44,9 @@ export function PublicProfile() {
     <header className="mb-8 flex flex-wrap items-center gap-4 rounded-xl border border-sub/20 bg-surface/50 p-6">
       <div aria-hidden className="grid h-16 w-16 place-items-center rounded-full bg-accent/15 font-mono text-2xl text-accent">{p.username.slice(0, 1).toUpperCase()}</div>
       <div className="min-w-0 flex-1"><h1 className="font-mono text-2xl text-text">{p.username}</h1><p className="mt-1 text-xs text-sub">Membro desde {new Date(p.created_at).toLocaleDateString("pt-PT", { dateStyle: "medium" })}</p></div>
-      {currentUser && currentUser.username !== p.username && <button type="button" onClick={() => void friendsApi.request(p.username).then(() => setFriendState("Pedido enviado")).catch((e) => setFriendState((e as Error).message))} className="rounded-lg border border-accent/40 px-4 py-2 font-mono text-xs text-accent">{friendState || "Adicionar amigo"}</button>}
+      {currentUser && currentUser.username !== p.username && <button type="button" disabled={friendState === "checking" || friendState === "friends" || friendState === "pending_sent"} onClick={() => { setFriendError(""); if (friendState === "pending_received" && incomingRequestId) void friendsApi.accept(incomingRequestId).then(() => { setIncomingRequestId(null); setFriendState("friends"); }).catch((e) => setFriendError((e as Error).message)); else void friendsApi.request(p.username).then(() => setFriendState("pending_sent")).catch((e) => setFriendError((e as Error).message)); }} className="rounded-lg border border-accent/40 px-4 py-2 font-mono text-xs text-accent disabled:cursor-default disabled:opacity-60">{friendState === "checking" ? "A verificar..." : friendState === "friends" ? "Já são amigos" : friendState === "pending_sent" ? "Pedido enviado" : friendState === "pending_received" ? "Aceitar pedido" : "Adicionar amigo"}</button>}
     </header>
+    {friendError && <p role="alert" className="mb-4 text-sm text-error">{friendError}</p>}
     <section className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <Stat label="ELO" value={p.elo} /><Stat label="Nível" value={p.level} /><Stat label="Partidas" value={p.matches_played} /><Stat label="Vitórias" value={`${p.matches_won} · ${p.win_rate}%`} />
       <Stat label="Melhor WPM" value={p.best_wpm} /><Stat label="WPM médio" value={p.avg_wpm} /><Stat label="Testes solo" value={p.total_races} /><Stat label="XP" value={p.xp} />

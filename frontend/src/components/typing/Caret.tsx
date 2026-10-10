@@ -22,7 +22,7 @@ export function Caret({ targetRef }: Props) {
 
   return (
     <div
-      className="absolute w-[2px] bg-accent rounded-full transition-all duration-100 ease-out"
+      className="pointer-events-none absolute w-[2px] bg-accent rounded-full transition-all duration-100 ease-out"
       style={{
         left: pos.left,
         top: pos.top,

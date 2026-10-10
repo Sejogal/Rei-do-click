@@ -26,32 +26,34 @@ export function TypingTest() {
   const linesVisible = isMobile ? 2 : 3;
   const fontSize = isMobile ? "text-lg" : "text-2xl";
   const gap = isMobile ? "gap-x-2 gap-y-2" : "gap-x-3 gap-y-3";
-  const lineHeightRem = isMobile ? 2.25 : 2.75;
+  // Altura de uma linha de texto + o gap vertical do flex-wrap.
+  // Deve corresponder ao leading-relaxed e ao gap-y-* usados abaixo.
+  const lineHeightRem = isMobile ? 2.33 : 3.19;
 
   const [activeRef, setActiveRef] = useState<HTMLElement | null>(null);
   const [offsetY, setOffsetY] = useState(0);
   const [focused, setFocused] = useState(true);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const setRef = useCallback((el: HTMLElement | null) => {
     setActiveRef(el);
   }, []);
 
-  // Reset do scroll quando as palavras mudam
+  // Repor o scroll apenas quando um novo teste começa.
   useEffect(() => {
-    setOffsetY(0);
-  }, [words]);
+    if (currentWord === 0) setOffsetY(0);
+  }, [currentWord]);
 
   // Scroll automático
   useEffect(() => {
-    if (!activeRef || !containerRef.current) return;
+    if (!activeRef || !viewportRef.current) return;
 
     const rect = activeRef.getBoundingClientRect();
-    const containerRect = containerRef.current.getBoundingClientRect();
+    const viewportRect = viewportRef.current.getBoundingClientRect();
     const lineHeight = rect.height + (isMobile ? 8 : 12);
     const linesFromTop = Math.floor(
-      (rect.top - containerRect.top + offsetY) / lineHeight
+      (rect.top - viewportRect.top) / lineHeight
     );
 
     if (linesFromTop >= linesVisible) {
@@ -89,11 +91,6 @@ export function TypingTest() {
     setFocused(true);
   };
 
-  const handleRefocus = () => {
-    setFocused(true);
-    inputRef.current?.focus();
-  };
-
   if (finished && stats) {
     return <Results stats={stats} onRestart={reset} />;
   }
@@ -125,19 +122,18 @@ export function TypingTest() {
 
         {!focused && !isMobile && (
           <div
-            onClick={handleRefocus}
-            className="absolute inset-0 z-10 flex items-center justify-center backdrop-blur-sm bg-bg/40 cursor-pointer rounded"
+            className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center backdrop-blur-sm bg-bg/40 rounded"
           >
             <span className="text-sub text-sm">Clica para focar</span>
           </div>
         )}
 
         <div
+          ref={viewportRef}
           className="overflow-hidden"
           style={{ height: `calc(${lineHeightRem}rem * ${linesVisible})` }}
         >
           <div
-            ref={containerRef}
             className={`relative flex flex-wrap ${gap} ${fontSize} font-mono leading-relaxed select-none transition-transform duration-200 ease-out`}
             style={{ transform: `translateY(-${offsetY}px)` }}
           >
