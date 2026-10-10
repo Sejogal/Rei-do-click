@@ -35,7 +35,7 @@ export default function App() {
     const timer = window.setInterval(() => { if (active) void refreshNotifications(true).catch(() => {}); }, 12000);
     const token = localStorage.getItem("typearena-token");
     if (token) {
-      const api = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+      const api = (import.meta.env.VITE_API_URL?.trim() || "http://localhost:8000").replace(/\/+$/, "");
       const wsUrl = api.replace(/^http/, "ws") + `/ws/presence?token=${encodeURIComponent(token)}`;
       presence = new WebSocket(wsUrl);
     }

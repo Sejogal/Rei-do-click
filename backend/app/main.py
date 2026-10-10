@@ -9,13 +9,18 @@ from app.routers import admin, auth, users, results, ws, multiplayer, matches, l
 
 app = FastAPI(title=settings.app_name)
 
+configured_origins = [
+    origin.strip().rstrip("/")
+    for origin in settings.cors_origins.split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
-        "http://localhost:5174",
         "http://127.0.0.1:5173",
-        "http://127.0.0.1:5174",
+        "https://rei-do-click-1.onrender.com/",  # ⬅️ o URL do teu frontend
     ],
     allow_credentials=True,
     allow_methods=["*"],

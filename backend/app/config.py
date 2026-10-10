@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     debug: bool = True
     database_url: str
     secret_key: str
+    cors_origins: str = ""
     bootstrap_admin_email: str | None = None
     bootstrap_admin_username: str | None = None
     bootstrap_admin_password: str | None = None

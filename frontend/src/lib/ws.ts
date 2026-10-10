@@ -1,8 +1,5 @@
-const WS_URL =
-  (import.meta.env.VITE_API_URL ?? "http://localhost:8000").replace(
-    /^http/,
-    "ws"
-  ) + "/ws/room";
+const API_URL = (import.meta.env.VITE_API_URL?.trim() || "http://localhost:8000").replace(/\/+$/, "");
+const WS_URL = API_URL.replace(/^http/, "ws") + "/ws/room";
 
 export type ServerMessage =
   | { type: "room_state"; room_id: string; players: PlayerState[]; status: RoomStatus; host_id: string; max_players: number; game_mode: GameMode; eliminated: string[] }
